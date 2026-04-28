@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SahkoTK — Pörssisähkön hinta nyt, tänään ja huomenna </title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #ffffff;
+            --surface: #f8f8f6;
+            --border: #e8e8e4;
+            --text-primary: #1a1a18;
+            --text-secondary: #5a5a54;
+            --text-muted: #8e8e88;
+            --accent: #1a6b3c;
+            --accent-light: #e8f5ed;
+            --accent-warn: #c8601a;
+            --accent-danger: #b83232;
+            --accent-danger-light: #fdeaea;
+            --mono: 'DM Mono', monospace;
+            --sans: 'DM Sans', sans-serif;
+            --radius: 16px;
+            --radius-sm: 10px;
+            --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 10px 30px rgba(0,0,0,0.03);
+        }
+
+        body {
+            font-family: var(--sans);
+            background: var(--bg);
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+            line-height: 1.6;
+            font-size: 16px;
+        }
+
+        #app {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 32px 24px 80px;
+        }
+
+        .header {
+            margin-bottom: 24px;
+        }
+        .header-title {
+            font-family: var(--mono);
+            font-size: 24px;
+            font-weight: 500;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+
+        h1.main-heading {
+            font-size: 42px;
+            font-weight: 600;
+            margin-bottom: 32px;
+            letter-spacing: -1.5px;
+            color: var(--text-primary);
+        }
+        @media (max-width: 600px) { h1.main-heading { font-size: 32px; } }
+
+        .day-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 32px;
+            background: var(--surface);
+            padding: 6px;
+            border-radius: var(--radius);
+            width: fit-content;
+        }
+        .day-tab {
+            font-family: var(--mono);
+            font-size: 14px;
+            padding: 10px 24px;
+            border: none;
+            border-radius: var(--radius-sm);
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .day-tab.active {
+            background: var(--bg);
+            color: var(--text-primary);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            font-weight: 500;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        @media (max-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+
+        .stat-card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 24px 20px;
+            box-shadow: var(--shadow);
+        }
+        .stat-label {
+            font-size: 12px;
+            font-family: var(--mono);
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+        .stat-value {
+            font-family: var(--mono);
+            font-size: 34px;
+            font-weight: 500;
+            line-height: 1;
+        }
+        .stat-unit { font-size: 16px; font-weight: 300; margin-left: 4px; }
+        .stat-sub { font-size: 12px; color: var(--text-muted); margin-top: 8px; font-family: var(--mono); }
+        .stat-card.--now { background: var(--accent-light); }
+        .stat-card.--now .stat-value { color: var(--accent); }
+        .stat-card.--high { background: var(--accent-danger-light); }
+        .stat-card.--high .stat-value { color: var(--accent-danger); }
+
+        .gauge-wrap {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin-bottom: 32px;
+        }
+        .gauge-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .gauge-label { font-size: 13px; font-family: var(--mono); color: var(--text-muted); text-transform: uppercase; }
+        .gauge-track { height: 10px; background: var(--border); border-radius: 99px; overflow: hidden; }
+        .gauge-fill { height: 100%; background: linear-gradient(90deg, #1a6b3c 0%, #f0a500 50%, #b83232 100%); transition: width 0.8s ease; width: 0%; }
+        .gauge-ticks { display: flex; justify-content: space-between; margin-top: 10px; font-size: 12px; font-family: var(--mono); color: var(--text-muted); }
+
+        .section-head { display: flex; align-items: center; justify-content: space-between; margin-top: 48px; margin-bottom: 16px; }
+        .section-title { font-size: 13px; font-family: var(--mono); color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.2px; }
+
+        .toggle-wrap { display: flex; align-items: center; gap: 10px; }
+        .toggle-label { font-size: 12px; font-family: var(--mono); color: var(--text-muted); }
+        .toggle { position: relative; width: 44px; height: 24px; cursor: pointer; }
+        .toggle input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider { position: absolute; inset: 0; background: var(--border); border-radius: 99px; transition: 0.3s; }
+        .toggle-slider::after { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: white; border-radius: 50%; transition: 0.3s; }
+        .toggle input:checked + .toggle-slider { background: var(--accent); }
+        .toggle input:checked + .toggle-slider::after { transform: translateX(20px); }
+
+        .chart-wrap, .table-wrap, .info-card { background: var(--surface); border-radius: var(--radius); padding: 32px; margin-bottom: 24px; box-shadow: var(--shadow); }
+        .chart-container { position: relative; height: 300px; }
+
+        .table-wrap { padding: 0; overflow: hidden; }
+        .table-head-row { display: grid; grid-template-columns: 1fr 1fr auto; padding: 14px 24px; background: var(--border); font-size: 11px; font-family: var(--mono); color: var(--text-muted); text-transform: uppercase; }
+        .hour-row { display: grid; grid-template-columns: 1fr 1fr auto; align-items: center; padding: 16px 24px; cursor: pointer; border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: 15px; }
+        .hour-row:hover { background: rgba(0,0,0,0.02); }
+        .hour-row.--current { background: var(--accent-light); color: var(--accent); font-weight: 600; }
+        .sub-rows { display: none; background: var(--bg); }
+        .sub-rows.open { display: block; }
+        .sub-row { display: grid; grid-template-columns: 1fr 1fr auto; padding: 12px 24px 12px 48px; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text-secondary); font-family: var(--mono); }
+        .sub-row.--current-slot { color: var(--accent); background: var(--accent-light); font-weight: 600; }
+
+        .info-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+        .info-card h3 { font-family: var(--mono); font-size: 20px; margin-bottom: 16px; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+        .info-card p { font-size: 16px; color: var(--text-secondary); margin-bottom: 16px; }
+        .info-card ul { margin-left: 20px; margin-bottom: 16px; color: var(--text-secondary); }
+        .info-card li { margin-bottom: 8px; }
+        .info-card a { color: var(--accent); font-weight: 600; text-decoration: none; border-bottom: 1px solid transparent; transition: border 0.2s; }
+        .info-card a:hover { border-bottom-color: var(--accent); }
+
+        /* FAQ Accordion Styles */
+        .faq-item { border-bottom: 1px solid var(--border); }
+        .faq-item:last-child { border-bottom: none; }
+        .faq-question { width: 100%; text-align: left; background: none; border: none; padding: 20px 0; font-family: var(--sans); font-weight: 600; font-size: 18px; color: var(--text-primary); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .faq-question::after { content: '＋'; font-size: 14px; color: var(--text-muted); transition: transform 0.3s; }
+        .faq-item.active .faq-question::after { content: '－'; }
+        .faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; color: var(--text-secondary); font-size: 15px; }
+        .faq-answer-inner { padding-bottom: 20px; }
+
+        .loader { display: flex; align-items: center; gap: 10px; padding: 60px 0; justify-content: center; color: var(--text-muted); font-family: var(--mono); }
+        .loader-dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; animation: pulse 1.2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1); } }
+        .error-msg { text-align: center; padding: 48px; color: var(--text-muted); font-family: var(--mono); }
+        .hidden { display: none !important; }
+
+        footer { margin-top: 60px; text-align: center; font-family: var(--mono); font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border); padding: 32px 0; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <header class="header">
+        <div class="header-title">SahkoTK</div>
+    </header>
+
+    <h1 class="main-heading">Pörssisähkön hinta nyt</h1>
+
+    <div class="day-tabs">
+        <button class="day-tab" data-offset="-1">Eilen</button>
+        <button class="day-tab active" data-offset="0">Tänään</button>
+        <button class="day-tab" data-offset="1">Huomenna</button>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card --now">
+            <div class="stat-label">Hinta nyt</div>
+            <div class="stat-value" id="statNow">--<span class="stat-unit">snt</span></div>
+            <div class="stat-sub" id="statNowTime">Ladataan...</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Päivän ka.</div>
+            <div class="stat-value" id="statAvg">--<span class="stat-unit">snt</span></div>
+            <div class="stat-sub">24 tunnin keskiarvo</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Päivän alin</div>
+            <div class="stat-value" id="statMin">--<span class="stat-unit">snt</span></div>
+            <div class="stat-sub" id="statMinTime">--:--</div>
+        </div>
+        <div class="stat-card --high">
+            <div class="stat-label">Päivän ylin</div>
+            <div class="stat-value" id="statMax">--<span class="stat-unit">snt</span></div>
+            <div class="stat-sub" id="statMaxTime">--:--</div>
+        </div>
+    </div>
+
+    <div class="gauge-wrap">
+        <div class="gauge-header">
+            <div class="gauge-label">Hintataso</div>
+            <div id="gaugePct" style="font-family:var(--mono); font-weight:600;">--%</div>
+        </div>
+        <div class="gauge-track"><div class="gauge-fill" id="gaugeFill"></div></div>
+        <div class="gauge-ticks">
+            <span id="gaugeMin">--snt</span>
+            <span>HALPA ↔ KALLIS</span>
+            <span id="gaugeMax">--snt</span>
+        </div>
+    </div>
+
+    <div class="section-head">
+        <h2 class="section-title" id="chartLabel">Tuntihinnat</h2>
+        <div class="toggle-wrap">
+            <span class="toggle-label">15 min tarkkuus</span>
+            <label class="toggle">
+                <input type="checkbox" id="resToggle">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+    </div>
+    <div class="chart-wrap">
+        <div class="chart-container">
+            <canvas id="mainChart"></canvas>
+            <div class="loader hidden" id="mainLoader">
+                <div class="loader-dot"></div><div class="loader-dot"></div><div class="loader-dot"></div>
+                <span style="margin-left:10px">Yhdistetään Nord Pooliin...</span>
+            </div>
+            <div class="error-msg hidden" id="mainError">
+                <strong>Tietoja ei saatavilla</strong><br>Huomisen hinnat julkaistaan yleensä n. klo 14:00.
+            </div>
+        </div>
+    </div>
+
+    <div class="section-head"><h2 class="section-title">Tuntikohtainen erittely</h2></div>
+    <div class="table-wrap" id="tableWrap">
+        <div class="loader"><div class="loader-dot"></div><div class="loader-dot"></div><div class="loader-dot"></div></div>
+    </div>
+
+    <div class="section-head"><h2 class="section-title">Syventävää tietoa sähkönhinnasta</h2></div>
+    <div class="info-grid">
+        <div class="info-card">
+            <h3>Mikä on pörssisähkö ja miten se toimii?</h3>
+            <p>
+                Pörssisähkö on moderni sähkösopimusmuoto, jossa sähkön hinta seuraa tunneittain Nord Pool -sähköpörssin markkinahintaa. Tämä tarkoittaa, että kuluttajana maksat sähköstäsi juuri sen verran, mitä se kullakin hetkellä maksaa tukkumarkkinoilla. Järjestelmä on läpinäkyvä ja antaa kuluttajalle mahdollisuuden vaikuttaa sähkölaskunsa suuruuteen aktiivisella seurannalla.
+            </p>
+            <p>
+                Seuraamalla sähkön hintaa voit ajoittaa suurimman kulutuksesi edullisimmille tunneille. Esimerkiksi <a href="https://sahkotanaan.fi/">Pörssisähkön hinta huomenna</a> kertoo sinulle jo etukäteen, milloin sähköauto kannattaa ladata tai milloin kodinkoneita on halvinta käyttää. Markkinahintainen sähkö on pitkällä aikavälillä osoittautunut usein edullisimmaksi vaihtoehdoksi kuluttajille, jotka pystyvät edes hieman joustamaan kulutustottumuksissaan.
+            </p>
+        </div>
+
+        <div class="info-card">
+            <h3>Hintoihin vaikuttavat tekijät</h3>
+            <p>Sähkön markkinahinta määräytyy monimutkaisen kysynnän ja tarjonnan yhteisvaikutuksen tuloksena, jossa seuraavat tekijät ovat avainasemassa:</p>
+            <ul>
+                <li><strong>Sääolosuhteet:</strong> Tuulivoiman tuotantomäärät ovat yksi merkittävimmistä tekijöistä. Kova tuuli laskee hintoja, kun taas tyyni sää nostaa niitä.</li>
+                <li><strong>Vesivarannot:</strong> Pohjoismaisen sähköjärjestelmän runko perustuu vesivoimaan. Norjan ja Ruotsin vesialtaiden täyttöaste vaikuttaa suoraan pohjahintoihin.</li>
+                <li><strong>Lämpötila:</strong> Erityisesti talvikaudella pakkasjaksot nostavat sähkön kysyntää lämmitystarpeen kasvaessa, mikä nostaa tuntihintoja.</li>
+                <li><strong>Ydinvoiman saatavuus:</strong> Suuret tuotantolaitokset, kuten Olkiluoto 3, vaikuttavat merkittävästi tarjontaan. Huoltokatkot näkyvät heti hintapiikkeinä.</li>
+                <li><strong>Polttoaineiden hinnat:</strong> Maakaasun ja kivihiilen hinnat Euroopassa heijastuvat sähkön hintaan silloin, kun puhdasta energiaa ei ole riittävästi tarjolla.</li>
+                <li><strong>Siirtokapasiteetti:</strong> Sähkönsiirto maiden välillä voi rajoittua vikojen tai huoltojen vuoksi, mikä eriyttää Suomen hinnan muista alueista.</li>
+            </ul>
+        </div>
+
+        <div class="info-card">
+            <h3>Miten voit optimoida sähkönkulutustasi?</h3>
+            <p>
+                Sähkönkulutuksen optimointi ei vaadi elämäntaparemonttia, vaan pieniä arjen valintoja. Suurimmat säästöt syntyvät lämmityksen ja lämpimän käyttöveden fiksusta ajoittamisesta. Jos talossasi on sähkölämmitys tai varaava takka, voit hyödyntää yön halpoja tunteja lämmittämiseen ja antaa rakenteiden varata lämpöä päivän kalliimpien tuntien ajaksi.
+            </p>
+            <p>
+                Myös modernit kodinkoneet ja älylaitteet tukevat usein ajastusta. Astianpesukoneen tai pyykinpesukoneen käynnistäminen aamuyöllä tai viikonloppuna voi puolittaa kyseisen laitteen sähkökustannukset verrattuna arkipäivän iltaruuhkaan. Muista myös seurata reaaliaikaista hintaa SahkoTK-dashboardilta, jotta tiedät milloin sähkö on poikkeuksellisen halpaa tai kallista.
+            </p>
+        </div>
+
+        <div class="info-card">
+            <h3>Verotus ja arvonlisäveron (ALV) merkitys</h3>
+            <p>
+                Sähkön hinta koostuu itse energian lisäksi veroviranomaisen määräämistä maksuista. Kaikki SahkoTK:n näyttämät hinnat sisältävät automaattisesti voimassa olevan 25,5 % arvonlisäveron, joka astui voimaan syyskuussa 2024. Tämä helpottaa hintojen vertailua, sillä näet suoraan sen summan, joka sähkön osalta päätyy laskullesi ilman yllättäviä lisäkuluja.
+            </p>
+            <p>
+                On kuitenkin hyvä muistaa, että kokonaissähkölaskuusi sisältyy energian lisäksi myös sähkön siirtomaksu sekä sähkövero. Nämä kaksi jälkimmäistä maksetaan yleensä paikalliselle verkkoyhtiölle, eivätkä ne vaihda hintaa tunneittain samalla tavalla kuin pörssisähkö. Säästämällä energian hinnassa pienennät kuitenkin suoraan sitä osuutta laskustasi, johon voit itse vaikuttaa aktiivisilla valinnoillasi.
+            </p>
+        </div>
+    </div>
+
+    <div class="section-head"><h2 class="section-title">Usein kysytyt kysymykset</h2></div>
+    <div class="info-card">
+        <div class="faq-item">
+            <button class="faq-question">Milloin seuraavan päivän sähköhinnat julkaistaan?</button>
+            <div class="faq-answer">
+                <div class="faq-answer-inner">
+                    Seuraavan vuorokauden tuntikohtaiset sähköhinnat julkaistaan Euroopan sähköpörssissä (Nord Pool) päivittäin noin klo 13:45–14:15 Suomen aikaa. Tästä syystä SahkoTK:n "Huomenna"-välilehti näyttää tietoja vasta iltapäivällä. Joskus tekniset viiveet pörssissä voivat siirtää julkaisua myöhemmäksi.
+                </div>
+            </div>
+        </div>
+        <div class="faq-item">
+            <button class="faq-question">Miksi pörssisähkön hinta voi olla negatiivinen?</button>
+            <div class="faq-answer">
+                <div class="faq-answer-inner">
+                    Sähkön hinta voi painua negatiiviseksi, kun sähkön tarjonta ylittää kysynnän huomattavasti. Tämä tapahtuu tyypillisesti tilanteissa, joissa tuulivoimaa tuotetaan runsaasti ja kulutus on samanaikaisesti vähäistä (esim. sunnuntaiyöt). Tällöin tuottajat ovat valmiita maksamaan siitä, että joku kuluttaa sähköä, välttääkseen tuotannon alasajon kustannukset.
+                </div>
+            </div>
+        </div>
+        <div class="faq-item">
+            <button class="faq-question">Miten SahkoTK:n 15 minuutin tarkkuus toimii?</button>
+            <div class="faq-answer">
+                <div class="faq-answer-inner">
+                    Suomi on siirtymässä 15 minuutin taseselvitysjaksoon. Vaikka monet sopimukset perustuvat vielä tuntihintoihin, tarjoamme mahdollisuuden tarkastella hintoja korkeammalla resoluutiolla. Jos pörssi toimittaa 15 minuutin dataa, näytämme sen suoraan. Muussa tapauksessa interpoloimme tuntihinnan neljään jaksoon, jotta voit valmistautua tulevaan markkinamuutokseen.
+                </div>
+            </div>
+        </div>
+        <div class="faq-item">
+            <button class="faq-question">Sisältävätkö hinnat sähköyhtiön marginaalin?</button>
+            <div class="faq-answer">
+                <div class="faq-answer-inner">
+                    Dashboardilla näkyvät hinnat ovat puhtaita pörssin markkinahintoja sisältäen vain arvonlisäveron (ALV 25,5 %). Sähköyhtiöt lisäävät tähän tyypillisesti oman välityspalkkionsa eli marginaalin (usein n. 0,40 - 0,60 snt/kWh) sekä kiinteän kuukausimaksun. Tarkista tarkka marginaali omasta sähkösopimuksestasi.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        &copy; 2024 SahkoTK · Hinnat sis. ALV 25,5% · Lähde: Nord Pool
+    </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    const TIMEZONE = 'Europe/Helsinki';
+    const VAT = 1.255;
+    const CACHE_NAME = 'sahkotk_cache_v3';
+
+    const state = {
+        selectedOffset: 0,
+        is15min: false,
+        data: {},
+        mainChart: null
+    };
+
+    function getHelsinkiTime() {
+        return new Date(new Date().toLocaleString('en-US', { timeZone: TIMEZONE }));
+    }
+
+    function getFormattedDate(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
+    async function fetchWithCORS(url) {
+        const proxies = [url, `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}` ];
+        for (const p of proxies) {
+            try {
+                const res = await fetch(p, { signal: AbortSignal.timeout(4000) });
+                if (res.ok) return await res.json();
+            } catch (e) { continue; }
+        }
+        throw new Error("Fetch failed");
+    }
+
+    function processRawData(raw) {
+        if (!Array.isArray(raw) || !raw.length) return null;
+        const items = raw.map(i => ({ val: Math.round(i.EUR_per_kWh * 100 * VAT * 100) / 100 }));
+        let slots = [];
+        if (items.length === 96) {
+            slots = items.map((it, i) => ({ price: it.val, h: Math.floor(i / 4), m: (i % 4) * 15, label: `${String(Math.floor(i / 4)).padStart(2,'0')}:${String((i % 4) * 15).padStart(2,'0')}` }));
+        } else {
+            for (let h = 0; h < 24; h++) {
+                const price = items[h]?.val || items[items.length-1].val;
+                for (let q = 0; q < 4; q++) slots.push({ price, h, m: q*15, label: `${String(h).padStart(2,'0')}:${String(q*15).padStart(2,'0')}` });
+            }
+        }
+        const hourly = Array.from({length: 24}, (_, h) => {
+            const chunk = slots.slice(h*4, h*4+4);
+            const avg = chunk.reduce((acc, s) => acc + s.price, 0) / 4;
+            return { h, avg: Math.round(avg * 100) / 100, slots: chunk };
+        });
+        return { slots, hourly };
+    }
+
+    async function loadDay(offset) {
+        const target = getHelsinkiTime();
+        target.setDate(target.getDate() + offset);
+        const key = getFormattedDate(target);
+        if (state.data[key]) return state.data[key];
+        const cached = localStorage.getItem(`${CACHE_NAME}_${key}`);
+        if (cached) {
+            const parsed = JSON.parse(cached);
+            if (Date.now() - parsed.ts < 3600000) { state.data[key] = parsed.data; return parsed.data; }
+        }
+        const [y, m, d] = key.split('-');
+        const url = `https://www.sahkonhintatanaan.fi/api/v1/prices/${y}/${m}-${d}.json`;
+        const raw = await fetchWithCORS(url);
+        const processed = processRawData(raw);
+        state.data[key] = processed;
+        localStorage.setItem(`${CACHE_NAME}_${key}`, JSON.stringify({ data: processed, ts: Date.now() }));
+        return processed;
+    }
+
+    function renderStats(payload, offset) {
+        const isToday = offset === 0;
+        const now = getHelsinkiTime();
+        const curH = now.getHours();
+        const curM = now.getMinutes();
+        const slotIdx = curH * 4 + Math.floor(curM / 15);
+
+        const currentPrice = isToday ? payload.slots[slotIdx]?.price : null;
+        const avg = payload.hourly.reduce((a, b) => a + b.avg, 0) / 24;
+        const sorted = [...payload.hourly].sort((a,b) => a.avg - b.avg);
+        const min = sorted[0];
+        const max = sorted[sorted.length-1];
+
+        document.getElementById('statNow').innerHTML = isToday ? `${currentPrice.toFixed(2)}<span class="stat-unit">snt</span>` : `--<span class="stat-unit">snt</span>`;
+        document.getElementById('statNowTime').innerText = isToday ? `${now.toLocaleDateString('fi-FI')} klo ${payload.slots[slotIdx].label}` : 'N/A';
+        document.getElementById('statAvg').innerHTML = `${avg.toFixed(2)}<span class="stat-unit">snt</span>`;
+        document.getElementById('statMin').innerHTML = `${min.avg.toFixed(2)}<span class="stat-unit">snt</span>`;
+        document.getElementById('statMinTime').innerText = `klo ${String(min.h).padStart(2,'0')}:00`;
+        document.getElementById('statMax').innerHTML = `${max.avg.toFixed(2)}<span class="stat-unit">snt</span>`;
+        document.getElementById('statMaxTime').innerText = `klo ${String(max.h).padStart(2,'0')}:00`;
+
+        if (isToday) {
+            const pct = Math.max(0, Math.min(100, ((currentPrice - min.avg) / (max.avg - min.avg)) * 100));
+            document.getElementById('gaugeFill').style.width = pct + '%';
+            document.getElementById('gaugePct').innerText = Math.round(pct) + '%';
+            document.getElementById('gaugeMin').innerText = min.avg.toFixed(1) + 'snt';
+            document.getElementById('gaugeMax').innerText = max.avg.toFixed(1) + 'snt';
+        } else {
+            document.getElementById('gaugeFill').style.width = '0%';
+            document.getElementById('gaugePct').innerText = '--%';
+        }
+    }
+
+    function renderMainChart(payload, offset) {
+        const ctx = document.getElementById('mainChart');
+        const isToday = offset === 0;
+        const nowH = getHelsinkiTime().getHours();
+        const nowS = nowH * 4 + Math.floor(getHelsinkiTime().getMinutes() / 15);
+        const labels = state.is15min ? payload.slots.map(s => s.label) : payload.hourly.map(h => `${String(h.h).padStart(2,'0')}:00`);
+        const data = state.is15min ? payload.slots.map(s => s.price) : payload.hourly.map(h => h.avg);
+        const colors = data.map((_, i) => (isToday && (state.is15min ? i === nowS : i === nowH)) ? '#1a6b3c' : '#d0dfd6');
+
+        if (state.mainChart) state.mainChart.destroy();
+        state.mainChart = new Chart(ctx, {
+            type: 'bar',
+            data: { labels, datasets: [{ data, backgroundColor: colors, borderRadius: 4, borderSkipped: false }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                scales: { x: { grid: { display: false }, ticks: { font: { family: 'DM Mono', size: 10 } } },
+                          y: { grid: { color: '#eee' }, ticks: { font: { family: 'DM Mono', size: 10 } } } }
+            }
+        });
+    }
+
+    function renderTable(payload, offset) {
+        const wrap = document.getElementById('tableWrap');
+        const isToday = offset === 0;
+        const nowH = getHelsinkiTime().getHours();
+        const nowS = nowH * 4 + Math.floor(getHelsinkiTime().getMinutes() / 15);
+        let html = `<div class="table-head-row"><div>Aika</div><div>Hinta (snt/kWh)</div><div></div></div>`;
+        payload.hourly.forEach(h => {
+            const isCur = isToday && h.h === nowH;
+            html += `
+                <div class="hour-row ${isCur ? '--current' : ''}" onclick="toggleRow(${h.h})">
+                    <div>${String(h.h).padStart(2,'0')}:00 - ${String((h.h+1)%24).padStart(2,'0')}:00</div>
+                    <div>${h.avg.toFixed(2)}</div>
+                    <div style="font-size:12px; color:var(--text-muted)">${isCur ? 'NYT ▾' : '▾'}</div>
+                </div>
+                <div class="sub-rows" id="sub-${h.h}">
+                    ${h.slots.map((s, idx) => `<div class="sub-row ${isToday && (h.h*4+idx) === nowS ? '--current-slot' : ''}">
+                        <div>${s.label} - ${h.slots[idx+1]?.label || (String((h.h+1)%24).padStart(2,'0')+':00')}</div>
+                        <div>${s.price.toFixed(2)}</div>
+                        <div></div>
+                    </div>`).join('')}
+                </div>`;
+        });
+        wrap.innerHTML = html;
+        if (isToday) toggleRow(nowH);
+    }
+
+    window.toggleRow = (h) => {
+        const el = document.getElementById(`sub-${h}`);
+        const isOpen = el.classList.contains('open');
+        document.querySelectorAll('.sub-rows').forEach(r => r.classList.remove('open'));
+        if (!isOpen) el.classList.add('open');
+    }
+
+    async function updateDisplay(offset) {
+        state.selectedOffset = offset;
+        const loader = document.getElementById('mainLoader');
+        const error = document.getElementById('mainError');
+        const canvas = document.getElementById('mainChart');
+        loader.classList.remove('hidden');
+        error.classList.add('hidden');
+        canvas.style.opacity = '0.2';
+        try {
+            const payload = await loadDay(offset);
+            loader.classList.add('hidden');
+            canvas.style.opacity = '1';
+            renderStats(payload, offset);
+            renderMainChart(payload, offset);
+            renderTable(payload, offset);
+        } catch (e) {
+            loader.classList.add('hidden');
+            error.classList.remove('hidden');
+            canvas.style.opacity = '0';
+            document.getElementById('tableWrap').innerHTML = '';
+        }
+    }
+
+    // FAQ Accordion Logic
+    function initFAQ() {
+        document.querySelectorAll('.faq-question').forEach(button => {
+            button.addEventListener('click', () => {
+                const faqItem = button.parentElement;
+                const answer = button.nextElementSibling;
+                const isActive = faqItem.classList.contains('active');
+
+                // Close all other items
+                document.querySelectorAll('.faq-item').forEach(item => {
+                    item.classList.remove('active');
+                    item.querySelector('.faq-answer').style.maxHeight = null;
+                });
+
+                if (!isActive) {
+                    faqItem.classList.add('active');
+                    answer.style.maxHeight = answer.scrollHeight + "px";
+                }
+            });
+        });
+    }
+
+    function init() {
+        document.querySelectorAll('.day-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.day-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                updateDisplay(parseInt(tab.dataset.offset));
+            });
+        });
+        document.getElementById('resToggle').addEventListener('change', (e) => {
+            state.is15min = e.target.checked;
+            updateDisplay(state.selectedOffset);
+        });
+        initFAQ();
+        updateDisplay(0);
+    }
+    document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
