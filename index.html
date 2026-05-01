@@ -3,8 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- SEO & Google Indexing -->
+    <title>Pörssisähkön hinta nyt — Seuraa tuntihintoja ja säästä | SahkoTK</title>
+    <meta name="description" content="Katso pörssisähkön hinta tänään ja huomenna. Reaaliaikainen seuranta, 15 minuutin tarkkuus ja asiantuntijan vinkit halvimman sähkön hyödyntämiseen. Mukana ALV 25,5 %.">
     <meta name="google-site-verification" content="ox8oW2i0tXcPhLq9HFDffQJobaAVJY3PIzPGXkHvWdM" />
-    <title>SahkoTK — Pörssisähkön hinta nyt, tänään ja huomenna </title>
+    <link rel="canonical" href="https://sahkotk.fi/" />
+
+    <!-- Schema.org - Googlen suosima rakenteellinen tieto -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "SahkoTK Pörssisähkö-dashboard",
+      "operatingSystem": "All",
+      "applicationCategory": "FinanceApplication",
+      "description": "Reaaliaikainen pörssisähkön hinnan seuranta ja hintaennusteet Suomessa.",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "EUR"
+      }
+    }
+    </script>
+
     <link rel="icon" type="image/png" href="sahkontutka.png">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
@@ -45,9 +67,7 @@
             padding: 32px 24px 80px;
         }
 
-        .header {
-            margin-bottom: 24px;
-        }
+        .header { margin-bottom: 24px; }
         .header-title {
             font-family: var(--mono);
             font-size: 24px;
@@ -135,6 +155,8 @@
         }
         .gauge-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
         .gauge-label { font-size: 13px; font-family: var(--mono); color: var(--text-muted); text-transform: uppercase; }
+        .gauge-status-badge { font-family: var(--sans); font-weight: 600; font-size: 14px; padding: 4px 12px; border-radius: 20px; }
+
         .gauge-track { height: 10px; background: var(--border); border-radius: 99px; overflow: hidden; }
         .gauge-fill { height: 100%; background: linear-gradient(90deg, #1a6b3c 0%, #f0a500 50%, #b83232 100%); transition: width 0.8s ease; width: 0%; }
         .gauge-ticks { display: flex; justify-content: space-between; margin-top: 10px; font-size: 12px; font-family: var(--mono); color: var(--text-muted); }
@@ -172,7 +194,6 @@
         .info-card a { color: var(--accent); font-weight: 600; text-decoration: none; border-bottom: 1px solid transparent; transition: border 0.2s; }
         .info-card a:hover { border-bottom-color: var(--accent); }
 
-        /* FAQ Accordion Styles */
         .faq-item { border-bottom: 1px solid var(--border); }
         .faq-item:last-child { border-bottom: none; }
         .faq-question { width: 100%; text-align: left; background: none; border: none; padding: 20px 0; font-family: var(--sans); font-weight: 600; font-size: 18px; color: var(--text-primary); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
@@ -209,12 +230,12 @@
         <div class="stat-card --now">
             <div class="stat-label">Hinta nyt</div>
             <div class="stat-value" id="statNow">--<span class="stat-unit">snt</span></div>
-            <div class="stat-sub" id="statNowTime">Ladataan...</div>
+            <div class="stat-sub" id="statNowTime">Päivitetään...</div>
         </div>
         <div class="stat-card">
             <div class="stat-label">Päivän ka.</div>
             <div class="stat-value" id="statAvg">--<span class="stat-unit">snt</span></div>
-            <div class="stat-sub">24 tunnin keskiarvo</div>
+            <div class="stat-sub">Vuorokauden keskihinta</div>
         </div>
         <div class="stat-card">
             <div class="stat-label">Päivän alin</div>
@@ -230,19 +251,19 @@
 
     <div class="gauge-wrap">
         <div class="gauge-header">
-            <div class="gauge-label">Hintataso</div>
-            <div id="gaugePct" style="font-family:var(--mono); font-weight:600;">--%</div>
+            <div class="gauge-label">Hintatason tilanne</div>
+            <div id="gaugeStatus" class="gauge-status-badge">Ladataan tietoja...</div>
         </div>
         <div class="gauge-track"><div class="gauge-fill" id="gaugeFill"></div></div>
         <div class="gauge-ticks">
             <span id="gaugeMin">--snt</span>
-            <span>HALPA ↔ KALLIS</span>
+            <span style="font-family: var(--mono); font-size: 10px;">HALPA ↔ KALLIS</span>
             <span id="gaugeMax">--snt</span>
         </div>
     </div>
 
     <div class="section-head">
-        <h2 class="section-title" id="chartLabel">Tuntihinnat</h2>
+        <h2 class="section-title">Hinnan kehitys tunneittain</h2>
         <div class="toggle-wrap">
             <span class="toggle-label">15 min tarkkuus</span>
             <label class="toggle">
@@ -251,6 +272,7 @@
             </label>
         </div>
     </div>
+    
     <div class="chart-wrap">
         <div class="chart-container">
             <canvas id="mainChart"></canvas>
@@ -259,7 +281,7 @@
                 <span style="margin-left:10px">Yhdistetään Nord Pooliin...</span>
             </div>
             <div class="error-msg hidden" id="mainError">
-                <strong>Tietoja ei saatavilla</strong><br>Huomisen hinnat julkaistaan yleensä n. klo 14:00.
+                <strong>Tietoja ei saatavilla</strong><br>Huomisen hinnat julkaistaan yleensä n. klo 13:45–14:15.
             </div>
         </div>
     </div>
@@ -269,48 +291,37 @@
         <div class="loader"><div class="loader-dot"></div><div class="loader-dot"></div><div class="loader-dot"></div></div>
     </div>
 
-    <div class="section-head"><h2 class="section-title">Syventävää tietoa sähkönhinnasta</h2></div>
+    <!-- Brainstormattu "Human-first" sisältöalue -->
+    <div class="section-head"><h2 class="section-title">Sähkösäästön tietopankki</h2></div>
     <div class="info-grid">
         <div class="info-card">
-            <h3>Mikä on pörssisähkö ja miten se toimii?</h3>
+            <h3>Sähkölasku kuriin – Näin hyödynnät pörssisähkön halvat tunnit</h3>
             <p>
-                Pörssisähkö on moderni sähkösopimusmuoto, jossa sähkön hinta seuraa tunneittain Nord Pool -sähköpörssin markkinahintaa. Tämä tarkoittaa, että kuluttajana maksat sähköstäsi juuri sen verran, mitä se kullakin hetkellä maksaa tukkumarkkinoilla. Järjestelmä on läpinäkyvä ja antaa kuluttajalle mahdollisuuden vaikuttaa sähkölaskunsa suuruuteen aktiivisella seurannalla.
+                Pörssisähkö ei ole vain numeroita näytöllä, se on työkalu arjen säästöihin. Kun hinta seuraa <strong>Nord Pool -sähköpörssiä</strong>, sinulla on valta päättää: maksatko sähköstäsi ruuhka-aikaan kymmeniä senttejä vai ajoitatko kulutuksesi tunneille, jolloin hinta on lähellä nollaa.
             </p>
             <p>
-                Seuraamalla sähkön hintaa voit ajoittaa suurimman kulutuksesi edullisimmille tunneille. Esimerkiksi <a href="https://sahkotanaan.fi/">Pörssisähkön hinta huomenna</a> kertoo sinulle jo etukäteen, milloin sähköauto kannattaa ladata tai milloin kodinkoneita on halvinta käyttää. Markkinahintainen sähkö on pitkällä aikavälillä osoittautunut usein edullisimmaksi vaihtoehdoksi kuluttajille, jotka pystyvät edes hieman joustamaan kulutustottumuksissaan.
+                Tämä sivu on luotu auttamaan sinua tekemään viisaita valintoja. <a href="https://sahkotanaan.fi/">Pörssisähkön hinta huomenna</a> päivittyy joka iltapäivä, jolloin voit suunnitella esimerkiksi sähköauton latauksen tai pyykinpesun valmiiksi. Pienellä vaivalla pörssisähkö on tutkitusti edullisin vaihtoehto suomalaiselle kodille.
             </p>
         </div>
 
         <div class="info-card">
-            <h3>Hintoihin vaikuttavat tekijät</h3>
-            <p>Sähkön markkinahinta määräytyy monimutkaisen kysynnän ja tarjonnan yhteisvaikutuksen tuloksena, jossa seuraavat tekijät ovat avainasemassa:</p>
+            <h3>Miksi sähkön hinta vaihtelee? (Ja miten ennustat halvat tunnit)</h3>
+            <p>Sähkön hinta ei synny tyhjiössä. Jos mietit, miksi hinta pompsahti, syy löytyy yleensä jostain näistä:</p>
             <ul>
-                <li><strong>Sääolosuhteet:</strong> Tuulivoiman tuotantomäärät ovat yksi merkittävimmistä tekijöistä. Kova tuuli laskee hintoja, kun taas tyyni sää nostaa niitä.</li>
-                <li><strong>Vesivarannot:</strong> Pohjoismaisen sähköjärjestelmän runko perustuu vesivoimaan. Norjan ja Ruotsin vesialtaiden täyttöaste vaikuttaa suoraan pohjahintoihin.</li>
-                <li><strong>Lämpötila:</strong> Erityisesti talvikaudella pakkasjaksot nostavat sähkön kysyntää lämmitystarpeen kasvaessa, mikä nostaa tuntihintoja.</li>
-                <li><strong>Ydinvoiman saatavuus:</strong> Suuret tuotantolaitokset, kuten Olkiluoto 3, vaikuttavat merkittävästi tarjontaan. Huoltokatkot näkyvät heti hintapiikkeinä.</li>
-                <li><strong>Polttoaineiden hinnat:</strong> Maakaasun ja kivihiilen hinnat Euroopassa heijastuvat sähkön hintaan silloin, kun puhdasta energiaa ei ole riittävästi tarjolla.</li>
-                <li><strong>Siirtokapasiteetti:</strong> Sähkönsiirto maiden välillä voi rajoittua vikojen tai huoltojen vuoksi, mikä eriyttää Suomen hinnan muista alueista.</li>
+                <li><strong>Tuuli ja sää:</strong> Kun tuulimyllyt pyörivät vauhdilla, sähkö on usein lähes ilmaista. Tyynellä säällä hinta nousee välittömästi.</li>
+                <li><strong>Pakkasjakso:</strong> Talven kylmimmät päivät lisäävät lämmitystarvetta, mikä näkyy heti kysyntäpiikkinä pörssissä.</li>
+                <li><strong>Ydinvoiman tila:</strong> Olkiluoto 3:n ja muiden laitosten huoltotauot poistavat markkinoilta suuria määriä vakaata sähköä.</li>
+                <li><strong>Siirtokapasiteetti:</strong> Jos siirtoyhteydet Ruotsiin tai Viroon ovat rajoitetut, Suomen hinta voi eriytyä muista maista.</li>
             </ul>
         </div>
 
         <div class="info-card">
-            <h3>Miten voit optimoida sähkönkulutustasi?</h3>
+            <h3>Vinkkejä sähkön säästöön ilman mukavuudesta tinkimistä</h3>
             <p>
-                Sähkönkulutuksen optimointi ei vaadi elämäntaparemonttia, vaan pieniä arjen valintoja. Suurimmat säästöt syntyvät lämmityksen ja lämpimän käyttöveden fiksusta ajoittamisesta. Jos talossasi on sähkölämmitys tai varaava takka, voit hyödyntää yön halpoja tunteja lämmittämiseen ja antaa rakenteiden varata lämpöä päivän kalliimpien tuntien ajaksi.
+                Älä suotta kyttää jokaista sekuntia. Keskity isoihin asioihin: <strong>lämmin käyttövesi, sähkölämmitys ja sähköauto</strong>. Jos pystyt siirtämään näitä yöhön tai iltapäivän halvoille tunneille, säästät jo merkittävästi.
             </p>
             <p>
-                Myös modernit kodinkoneet ja älylaitteet tukevat usein ajastusta. Astianpesukoneen tai pyykinpesukoneen käynnistäminen aamuyöllä tai viikonloppuna voi puolittaa kyseisen laitteen sähkökustannukset verrattuna arkipäivän iltaruuhkaan. Muista myös seurata reaaliaikaista hintaa SahkoTK-dashboardilta, jotta tiedät milloin sähkö on poikkeuksellisen halpaa tai kallista.
-            </p>
-        </div>
-
-        <div class="info-card">
-            <h3>Verotus ja arvonlisäveron (ALV) merkitys</h3>
-            <p>
-                Sähkön hinta koostuu itse energian lisäksi veroviranomaisen määräämistä maksuista. Kaikki SahkoTK:n näyttämät hinnat sisältävät automaattisesti voimassa olevan 25,5 % arvonlisäveron, joka astui voimaan syyskuussa 2024. Tämä helpottaa hintojen vertailua, sillä näet suoraan sen summan, joka sähkön osalta päätyy laskullesi ilman yllättäviä lisäkuluja.
-            </p>
-            <p>
-                On kuitenkin hyvä muistaa, että kokonaissähkölaskuusi sisältyy energian lisäksi myös sähkön siirtomaksu sekä sähkövero. Nämä kaksi jälkimmäistä maksetaan yleensä paikalliselle verkkoyhtiölle, eivätkä ne vaihda hintaa tunneittain samalla tavalla kuin pörssisähkö. Säästämällä energian hinnassa pienennät kuitenkin suoraan sitä osuutta laskustasi, johon voit itse vaikuttaa aktiivisilla valinnoillasi.
+                Tarkista tältä dashboardilta päivän alin hinta. Jos se osuu aamuyölle, ajasta astianpesukone valmiiksi. Muista, että SahkoTK näyttää hinnat <strong>sisältäen 25,5 % arvonlisäveron</strong>, joten näkemäsi luku on se, mitä oikeasti päätyy laskullesi.
             </p>
         </div>
     </div>
@@ -318,18 +329,10 @@
     <div class="section-head"><h2 class="section-title">Usein kysytyt kysymykset</h2></div>
     <div class="info-card">
         <div class="faq-item">
-            <button class="faq-question">Milloin seuraavan päivän sähköhinnat julkaistaan?</button>
+            <button class="faq-question">Milloin huomisen hinnat julkaistaan?</button>
             <div class="faq-answer">
                 <div class="faq-answer-inner">
-                    Seuraavan vuorokauden tuntikohtaiset sähköhinnat julkaistaan Euroopan sähköpörssissä (Nord Pool) päivittäin noin klo 13:45–14:15 Suomen aikaa. Tästä syystä SahkoTK:n "Huomenna"-välilehti näyttää tietoja vasta iltapäivällä. Joskus tekniset viiveet pörssissä voivat siirtää julkaisua myöhemmäksi.
-                </div>
-            </div>
-        </div>
-        <div class="faq-item">
-            <button class="faq-question">Miksi pörssisähkön hinta voi olla negatiivinen?</button>
-            <div class="faq-answer">
-                <div class="faq-answer-inner">
-                    Sähkön hinta voi painua negatiiviseksi, kun sähkön tarjonta ylittää kysynnän huomattavasti. Tämä tapahtuu tyypillisesti tilanteissa, joissa tuulivoimaa tuotetaan runsaasti ja kulutus on samanaikaisesti vähäistä (esim. sunnuntaiyöt). Tällöin tuottajat ovat valmiita maksamaan siitä, että joku kuluttaa sähköä, välttääkseen tuotannon alasajon kustannukset.
+                    Seuraavan vuorokauden tuntihinnat julkaistaan Euroopan sähköpörssissä päivittäin noin klo 13:45–14:15. SahkoTK päivittää tiedot automaattisesti heti, kun ne ovat saatavilla.
                 </div>
             </div>
         </div>
@@ -337,30 +340,30 @@
             <button class="faq-question">Miten SahkoTK:n 15 minuutin tarkkuus toimii?</button>
             <div class="faq-answer">
                 <div class="faq-answer-inner">
-                    Suomi on siirtymässä 15 minuutin taseselvitysjaksoon. Vaikka monet sopimukset perustuvat vielä tuntihintoihin, tarjoamme mahdollisuuden tarkastella hintoja korkeammalla resoluutiolla. Jos pörssi toimittaa 15 minuutin dataa, näytämme sen suoraan. Muussa tapauksessa interpoloimme tuntihinnan neljään jaksoon, jotta voit valmistautua tulevaan markkinamuutokseen.
+                    Suomi on siirtymässä 15 minuutin taseselvitysjaksoon. Tarjoamme mahdollisuuden tarkastella hintoja korkeammalla resoluutiolla joko interpoloimalla tai käyttämällä uutta 15 minuutin pörssidataa, jotta voit valmistautua tulevaan markkinamuutokseen.
                 </div>
             </div>
         </div>
         <div class="faq-item">
-            <button class="faq-question">Sisältävätkö hinnat sähköyhtiön marginaalin?</button>
+            <button class="faq-question">Miksi hinnat sisältävät ALV 25,5 %?</button>
             <div class="faq-answer">
                 <div class="faq-answer-inner">
-                    Dashboardilla näkyvät hinnat ovat puhtaita pörssin markkinahintoja sisältäen vain arvonlisäveron (ALV 25,5 %). Sähköyhtiöt lisäävät tähän tyypillisesti oman välityspalkkionsa eli marginaalin (usein n. 0,40 - 0,60 snt/kWh) sekä kiinteän kuukausimaksun. Tarkista tarkka marginaali omasta sähkösopimuksestasi.
+                    Haluamme tarjota rehellisen kuvan sähkön hinnasta. Syyskuusta 2024 alkaen Suomessa on käytössä 25,5 prosentin arvonlisäverokanta, ja näyttämämme hinnat sisältävät tämän veron automaattisesti.
                 </div>
             </div>
         </div>
     </div>
 
     <footer>
-        &copy; 2026 SahkoTK · Hinnat sis. ALV 25,5% · Lähde: Nord Pool
+        &copy; 2026 SahkoTK · Kaikki hinnat sis. ALV 25,5% · Lähde: Nord Pool
     </footer>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
     const TIMEZONE = 'Europe/Helsinki';
-    const VAT = 1.255;
-    const CACHE_NAME = 'sahkotk_cache_v3';
+    const VAT = 1.255; // 25.5% ALV
+    const CACHE_NAME = 'sahkotk_cache_v4';
 
     const state = {
         selectedOffset: 0,
@@ -399,7 +402,7 @@
             slots = items.map((it, i) => ({ price: it.val, h: Math.floor(i / 4), m: (i % 4) * 15, label: `${String(Math.floor(i / 4)).padStart(2,'0')}:${String((i % 4) * 15).padStart(2,'0')}` }));
         } else {
             for (let h = 0; h < 24; h++) {
-                const price = items[h]?.val || items[items.length-1].val;
+                const price = items[h]?.val || (items.length > 0 ? items[items.length-1].val : 0);
                 for (let q = 0; q < 4; q++) slots.push({ price, h, m: q*15, label: `${String(h).padStart(2,'0')}:${String(q*15).padStart(2,'0')}` });
             }
         }
@@ -416,11 +419,13 @@
         target.setDate(target.getDate() + offset);
         const key = getFormattedDate(target);
         if (state.data[key]) return state.data[key];
+        
         const cached = localStorage.getItem(`${CACHE_NAME}_${key}`);
         if (cached) {
             const parsed = JSON.parse(cached);
             if (Date.now() - parsed.ts < 3600000) { state.data[key] = parsed.data; return parsed.data; }
         }
+        
         const [y, m, d] = key.split('-');
         const url = `https://www.sahkonhintatanaan.fi/api/v1/prices/${y}/${m}-${d}.json`;
         const raw = await fetchWithCORS(url);
@@ -437,29 +442,46 @@
         const curM = now.getMinutes();
         const slotIdx = curH * 4 + Math.floor(curM / 15);
 
-        const currentPrice = isToday ? payload.slots[slotIdx]?.price : null;
+        const currentPrice = isToday ? payload.slots[slotIdx]?.price : 0;
         const avg = payload.hourly.reduce((a, b) => a + b.avg, 0) / 24;
         const sorted = [...payload.hourly].sort((a,b) => a.avg - b.avg);
         const min = sorted[0];
         const max = sorted[sorted.length-1];
 
         document.getElementById('statNow').innerHTML = isToday ? `${currentPrice.toFixed(2)}<span class="stat-unit">snt</span>` : `--<span class="stat-unit">snt</span>`;
-        document.getElementById('statNowTime').innerText = isToday ? `${now.toLocaleDateString('fi-FI')} klo ${payload.slots[slotIdx].label}` : 'N/A';
+        document.getElementById('statNowTime').innerText = isToday ? `Klo ${payload.slots[slotIdx].label}` : 'Valitse tänään';
         document.getElementById('statAvg').innerHTML = `${avg.toFixed(2)}<span class="stat-unit">snt</span>`;
         document.getElementById('statMin').innerHTML = `${min.avg.toFixed(2)}<span class="stat-unit">snt</span>`;
-        document.getElementById('statMinTime').innerText = `klo ${String(min.h).padStart(2,'0')}:00`;
+        document.getElementById('statMinTime').innerText = `Klo ${String(min.h).padStart(2,'0')}:00`;
         document.getElementById('statMax').innerHTML = `${max.avg.toFixed(2)}<span class="stat-unit">snt</span>`;
-        document.getElementById('statMaxTime').innerText = `klo ${String(max.h).padStart(2,'0')}:00`;
+        document.getElementById('statMaxTime').innerText = `Klo ${String(max.h).padStart(2,'0')}:00`;
 
+        const statusEl = document.getElementById('gaugeStatus');
         if (isToday) {
             const pct = Math.max(0, Math.min(100, ((currentPrice - min.avg) / (max.avg - min.avg)) * 100));
             document.getElementById('gaugeFill').style.width = pct + '%';
-            document.getElementById('gaugePct').innerText = Math.round(pct) + '%';
             document.getElementById('gaugeMin').innerText = min.avg.toFixed(1) + 'snt';
             document.getElementById('gaugeMax').innerText = max.avg.toFixed(1) + 'snt';
+            
+            // Witty/Human status update
+            if (currentPrice < 5) {
+                statusEl.innerText = "Nyt on halpaa! 🌿";
+                statusEl.style.backgroundColor = "var(--accent-light)";
+                statusEl.style.color = "var(--accent)";
+            } else if (currentPrice < 15) {
+                statusEl.innerText = "Normaali hinta 👍";
+                statusEl.style.backgroundColor = "#fff9e6";
+                statusEl.style.color = "#b08a00";
+            } else {
+                statusEl.innerText = "Kallista – säästä sähköä! ⚠️";
+                statusEl.style.backgroundColor = "var(--accent-danger-light)";
+                statusEl.style.color = "var(--accent-danger)";
+            }
         } else {
             document.getElementById('gaugeFill').style.width = '0%';
-            document.getElementById('gaugePct').innerText = '--%';
+            statusEl.innerText = "Katso päivän keskihinta";
+            statusEl.style.backgroundColor = "var(--border)";
+            statusEl.style.color = "var(--text-secondary)";
         }
     }
 
@@ -488,14 +510,14 @@
         const isToday = offset === 0;
         const nowH = getHelsinkiTime().getHours();
         const nowS = nowH * 4 + Math.floor(getHelsinkiTime().getMinutes() / 15);
-        let html = `<div class="table-head-row"><div>Aika</div><div>Hinta (snt/kWh)</div><div></div></div>`;
+        let html = `<div class="table-head-row"><div>Kellonaika</div><div>Hinta (snt/kWh)</div><div></div></div>`;
         payload.hourly.forEach(h => {
             const isCur = isToday && h.h === nowH;
             html += `
                 <div class="hour-row ${isCur ? '--current' : ''}" onclick="toggleRow(${h.h})">
                     <div>${String(h.h).padStart(2,'0')}:00 - ${String((h.h+1)%24).padStart(2,'0')}:00</div>
                     <div>${h.avg.toFixed(2)}</div>
-                    <div style="font-size:12px; color:var(--text-muted)">${isCur ? 'NYT ▾' : '▾'}</div>
+                    <div style="font-size:12px; color:var(--text-muted)">${isCur ? 'NYT ▾' : 'Lisätiedot ▾'}</div>
                 </div>
                 <div class="sub-rows" id="sub-${h.h}">
                     ${h.slots.map((s, idx) => `<div class="sub-row ${isToday && (h.h*4+idx) === nowS ? '--current-slot' : ''}">
@@ -539,20 +561,16 @@
         }
     }
 
-    // FAQ Accordion Logic
     function initFAQ() {
         document.querySelectorAll('.faq-question').forEach(button => {
             button.addEventListener('click', () => {
                 const faqItem = button.parentElement;
                 const answer = button.nextElementSibling;
                 const isActive = faqItem.classList.contains('active');
-
-                // Close all other items
                 document.querySelectorAll('.faq-item').forEach(item => {
                     item.classList.remove('active');
                     item.querySelector('.faq-answer').style.maxHeight = null;
                 });
-
                 if (!isActive) {
                     faqItem.classList.add('active');
                     answer.style.maxHeight = answer.scrollHeight + "px";
